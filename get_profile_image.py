@@ -1,16 +1,16 @@
 from flask import request, jsonify
 from sqlalchemy.orm import Session
 from database import get_db
-from encryption_service import encrypt_data
+from encryption_service import encrypt_data, hybrid_encrypt_data
 from cryptography.hazmat.primitives import serialization
 import base64
 import json
-from models import User
+from models import DirectoryPhoto
+import io
 from calls import call_check_public_key
 import requests
 
-
-def get_barcode():
+def get_profile_image():
     try:
         # Get the request data
         data = request.get_json()
@@ -20,7 +20,6 @@ def get_barcode():
         # Ensure the public key is in the correct PEM format
         if not email or not public_key_pem:
             return jsonify({'message': 'Email and public key are required'}), 400
-
         try:
             response_code = call_check_public_key.call_check_public_key(email, public_key_pem)
         except requests.exceptions.Timeout:
@@ -41,27 +40,30 @@ def get_barcode():
         # Establish a connection to the database
         db = next(get_db())
 
-        # Look up the user's barcode in the database using SQLAlchemy
-        user = db.query(User).filter_by(email=email).first()
+        # Look up the user's profile picture in the database using SQLAlchemy
+        user = db.query(DirectoryPhoto).filter_by(email=email).first()
 
         if user is None:
             return jsonify({'message': 'User not found'}), 404
 
-        # Prepare the JSON data to be encrypted
-        json_data = {
+        # Ensure user has a profile picture
+        if not user.photo:
+            return jsonify({'message': 'Profile picture not found'}), 404
+
+        # Encrypt the binary photo data using the hybrid encryption method
+        encrypted_result = hybrid_encrypt_data(public_key, user.photo)
+
+        if encrypted_result is None:
+            return jsonify({'message': 'Encryption failed'}), 500
+
+        # Create a response containing the encrypted photo
+        response_data = {
             'email': user.email,
-            'barcode': user.barcode
+            'encrypted_key': encrypted_result['encrypted_key'],
+            'encrypted_photo': encrypted_result['encrypted_data']
         }
-        json_string = json.dumps(json_data)
-        print(json_string)
-        # Encrypt the JSON string with the provided public key
-        encrypted_json = encrypt_data(public_key, json_string)
-
-        # Encode the encrypted data in base64 for easy transmission
-        encrypted_json_base64 = base64.b64encode(encrypted_json).decode('utf-8')
-
-        return jsonify({'encrypted_json': encrypted_json_base64}), 200
+        return jsonify(response_data), 200
 
     except Exception as e:
-        print(f"Error during barcode retrieval: {e}")
-        return jsonify({'message': 'An error occurred while retrieving the barcode'}), 500
+        print(f"Error during profile picture retrieval: {e}")
+        return jsonify({'message': 'An error occurred while retrieving the profile picture'}), 500
