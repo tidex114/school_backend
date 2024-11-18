@@ -5,6 +5,8 @@ from models import Transaction
 from calls import call_check_public_key
 import requests
 from cryptography.hazmat.primitives import serialization
+from encryption_service import hybrid_encrypt_data
+import json
 def get_transactions():
     try:
         # Get the request data
@@ -78,12 +80,23 @@ def get_transactions():
 
         # Get the latest transaction timestamp
         latest_timestamp = transactions[-1].transaction_date.strftime('%Y-%m-%d %H:%M:%S') if transactions else None
-        response = {
+        response_dict = {
             'transactions': transactions_list,
             'has_more': has_more,
             'latest_timestamp': latest_timestamp
         }
-        return jsonify(response), 200
+        if isinstance(public_key_pem, str):
+            public_key = serialization.load_pem_public_key(public_key_pem.encode('utf-8'))
+        else:
+            public_key = serialization.load_pem_public_key(public_key_pem)
+
+        json_string = json.dumps(response_dict)
+        json_bytes = json_string.encode('utf-8')
+        encrypted_result = hybrid_encrypt_data(public_key, json_bytes)
+
+        return jsonify({'encrypted_data': encrypted_result['encrypted_data'],
+                        'encrypted_key': encrypted_result['encrypted_key']}), 200
+
 
     except Exception as e:
         print(f"Error during transaction retrieval: {e}")
