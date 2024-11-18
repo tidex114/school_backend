@@ -1,4 +1,4 @@
-from sqlalchemy import create_engine, asc, Column, Integer, String, Float, DateTime, LargeBinary
+from sqlalchemy import DECIMAL, Column, Integer, String, Float, DateTime, LargeBinary
 from sqlalchemy.ext.declarative import declarative_base
 
 
@@ -9,6 +9,7 @@ class User(Base):
 
     barcode = Column(Integer, primary_key=True, index=True)
     email = Column(String(100), unique=True, nullable=False)
+    remaining_balance = Column(DECIMAL(10, 2), nullable=True)
 
 
 class DirectoryPhoto(Base):
