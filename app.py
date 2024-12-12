@@ -1,7 +1,7 @@
 from flask import Flask
 from gets.get_barcode import get_barcode
 from gets.get_profile_image import get_profile_image
-from gets.get_transactions import get_transactions
+from gets.get_transactions_new import get_transactions
 from gets.get_balance import get_balance
 
 app = Flask(__name__)
