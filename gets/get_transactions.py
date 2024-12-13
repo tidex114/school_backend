@@ -7,21 +7,22 @@ import requests
 from cryptography.hazmat.primitives import serialization
 from encryption_service import hybrid_encrypt_data
 import json
+
 def get_transactions():
     try:
         # Get the request data
         data = request.get_json()
         student_id = data.get('student_id')
         timestamp = data.get('timestamp')
+        first_name = data.get('first_name')
+        last_name = data.get('last_name')
         public_key_pem = data.get('public_key')
-        email = data.get('email')
 
-
-        if not email or not public_key_pem:
-            return jsonify({'message': 'Email and public key are required'}), 400
+        if not first_name or not last_name or not public_key_pem:
+            return jsonify({'message': 'First name, last name, and public key are required'}), 400
 
         try:
-            response_code = call_check_public_key.call_check_public_key(email, public_key_pem)
+            response_code = call_check_public_key.call_check_public_key(first_name, last_name, public_key_pem)
         except requests.exceptions.Timeout:
             return jsonify({'message': 'Timeout occurred while verifying public key'}), 504
         except requests.exceptions.RequestException as e:
@@ -29,8 +30,6 @@ def get_transactions():
 
         if response_code != 200:
             return jsonify({'message': 'Verification failed'}), response_code
-
-
 
         print(f"Got ts: {timestamp}")
         # Ensure student_id and timestamp are provided
@@ -96,7 +95,6 @@ def get_transactions():
 
         return jsonify({'encrypted_data': encrypted_result['encrypted_data'],
                         'encrypted_key': encrypted_result['encrypted_key']}), 200
-
 
     except Exception as e:
         print(f"Error during transaction retrieval: {e}")

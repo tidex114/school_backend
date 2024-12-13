@@ -31,16 +31,17 @@ def get_transactions():
             print(f"[DEBUG] Invalid timestamp format: {e}")
             return jsonify({"message": "Invalid timestamp format"}), 400
 
+        first_name = data.get("first_name")
+        last_name = data.get("last_name")
         public_key_pem = data.get("public_key")
-        email = data.get("email")
 
-        if not email or not public_key_pem:
-            print("[DEBUG] Missing email or public key")
-            return jsonify({"message": "Email and public key are required"}), 400
+        if not first_name or not last_name or not public_key_pem:
+            print("[DEBUG] Missing first name, last name, or public key")
+            return jsonify({"message": "First name, last name, and public key are required"}), 400
 
         try:
-            print(f"[DEBUG] Verifying public key for email: {email}")
-            response_code = call_check_public_key.call_check_public_key(email, public_key_pem)
+            print(f"[DEBUG] Verifying public key for {first_name} {last_name}")
+            response_code = call_check_public_key.call_check_public_key(first_name, last_name, public_key_pem)
             print(f"[DEBUG] Public key verification response code: {response_code}")
         except requests.exceptions.Timeout:
             print("[DEBUG] Timeout during public key verification")
