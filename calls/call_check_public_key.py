@@ -2,7 +2,7 @@ import requests
 from os import getenv
 
 def call_check_public_key(first_name, last_name, public_key):
-    url = f'http://{getenv("POMCARD_BACKEND_HOST")}/check_public_key'
+    url = f'{getenv("POMCARD_BACKEND_HOST")}/check_public_key'
     headers = {'Content-Type': 'application/json'}
     data = {
         'first_name': first_name,
