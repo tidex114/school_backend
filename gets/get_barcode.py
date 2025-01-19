@@ -7,16 +7,34 @@ import base64
 import json
 from models import PomfretStudent
 from calls import call_check_public_key
+from validators.jwt_validator import validate_jwt_token
 import requests
-
 
 def get_barcode():
     try:
         # Get the request data
         data = request.get_json()
+        uid = data.get('uid')
         first_name = data.get('first_name')
         last_name = data.get('last_name')
         public_key_pem = data.get('public_key')
+
+        # Get the Authorization header
+        access_token = request.headers.get('Authorization')
+        if not access_token or not access_token.startswith("Bearer "):
+            print(f"Authorization header: {access_token}")
+            return jsonify({'message': 'Authorization header is missing or invalid'}), 401
+
+        # Extract the token value from the Authorization header
+        token = access_token.split(" ")[1]
+        print(token)
+        # Validate the token using the separate validator module
+        is_valid, validation_response = validate_jwt_token(token, uid, f"{first_name} {last_name}")
+
+        # Check if the token validation failed
+        if not is_valid:
+            print(f"Token validation failed: {validation_response}")
+            return jsonify(validation_response), 401
 
         # Ensure the public key is in the correct PEM format
         if not first_name or not last_name or not public_key_pem:
@@ -56,6 +74,7 @@ def get_barcode():
         }
         json_string = json.dumps(json_data)
         print(json_string)
+
         # Encrypt the JSON string with the provided public key
         encrypted_json = encrypt_data(public_key, json_string)
 
