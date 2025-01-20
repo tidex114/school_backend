@@ -3,12 +3,12 @@ from sqlalchemy import func, desc, literal_column
 from database import get_mks_db
 from models import NewTransaction
 from calls import call_check_public_key
+from validators.jwt_validator import validate_jwt_token
 import requests
 from cryptography.hazmat.primitives import serialization
 from encryption_service import hybrid_encrypt_data
 import json
 from datetime import datetime
-
 from sqlalchemy import cast, DateTime
 
 def get_transactions():
@@ -18,8 +18,29 @@ def get_transactions():
         data = request.get_json()
         print(f"[DEBUG] Received data: {data}")
 
+        uid = data.get('uid')
         student_id = data.get("student_id")
         timestamp_str = data.get("timestamp")
+        first_name = data.get("first_name")
+        last_name = data.get("last_name")
+        public_key_pem = data.get("public_key")
+
+        # Get the Authorization header
+        access_token = request.headers.get('Authorization')
+        if not access_token or not access_token.startswith("Bearer "):
+            print(f"Authorization header: {access_token}")
+            return jsonify({'message': 'Authorization header is missing or invalid'}), 401
+
+        # Extract the token value from the Authorization header
+        token = access_token.split(" ")[1]
+        print(token)
+        # Validate the token using the separate validator module
+        is_valid, validation_response = validate_jwt_token(token, uid, f"{first_name} {last_name}")
+
+        # Check if the token validation failed
+        if not is_valid:
+            print(f"Token validation failed: {validation_response}")
+            return jsonify(validation_response), 401
 
         try:
             # Handle microseconds if present in timestamp
@@ -30,10 +51,6 @@ def get_transactions():
         except ValueError as e:
             print(f"[DEBUG] Invalid timestamp format: {e}")
             return jsonify({"message": "Invalid timestamp format"}), 400
-
-        first_name = data.get("first_name")
-        last_name = data.get("last_name")
-        public_key_pem = data.get("public_key")
 
         if not first_name or not last_name or not public_key_pem:
             print("[DEBUG] Missing first name, last name, or public key")
